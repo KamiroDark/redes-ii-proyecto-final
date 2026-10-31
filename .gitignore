@@ -1,0 +1,33 @@
+# Secretos y credenciales (NUNCA subir)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets/
+credenciales*
+
+# Datos locales de herramientas
+.n8n/
+*.sqlite
+*.db
+*.log
+
+# Discos e imagenes de maquinas virtuales (pesan GBs, no van a Git)
+*.vmdk
+*.vdi
+*.ova
+*.iso
+*.qcow2
+*.img
+
+# Material del profesor (propiedad del docente)
+Proyecto_final_Redes_II_Instrucciones.pdf
+Imagen_Proyecto_final.*
+
+# Sistema y editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
