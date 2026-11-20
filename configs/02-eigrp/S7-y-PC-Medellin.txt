@@ -1,0 +1,11 @@
+! S7 (switch capa 2, todos los puertos en VLAN 1)
+enable
+configure terminal
+hostname S7
+end
+write memory
+
+! PC-Medellin (VPCS)
+set pcname PC-Medellin
+ip 192.168.50.10/24 192.168.50.1
+save

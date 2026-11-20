@@ -1,0 +1,20 @@
+! R7-BOGOTA - EIGRP AS 100 - 2026-11-20
+enable
+configure terminal
+hostname R7-BOGOTA
+no ip domain-lookup
+interface ethernet0/1
+ description Enlace a R6-CUCUTA
+ ip address 192.168.19.1 255.255.255.252
+ no shutdown
+interface ethernet0/0
+ description Enlace a R8-MEDELLIN
+ ip address 192.168.18.1 255.255.255.252
+ no shutdown
+router eigrp 100
+ eigrp router-id 7.7.7.7
+ no auto-summary
+ network 192.168.19.0 0.0.0.3
+ network 192.168.18.0 0.0.0.3
+end
+write memory
