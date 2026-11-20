@@ -1,0 +1,10 @@
+// Zona interna del Bloque 1
+zone "pamplona.local" {
+    type master;
+    file "/etc/bind/db.pamplona.local";
+};
+
+zone "pamplona.com" {
+    type master;
+    file "/etc/bind/db.pamplona.com";
+};

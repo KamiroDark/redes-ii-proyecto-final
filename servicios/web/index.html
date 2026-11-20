@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Red Corporativa Pamplona · Proyecto Final Redes II</title>
+<meta name="description" content="Portal de la infraestructura de red integrada RIP, EIGRP y OSPF con NAT, EtherChannel, monitoreo y automatización.">
+<style>
+  :root{
+    --bg:#070b16; --bg2:#0c1324; --card:#101a30; --card2:#13203b;
+    --line:#1f2d4d; --text:#e6ecff; --muted:#93a3c7;
+    --cyan:#22d3ee; --violet:#8b5cf6; --green:#34d399; --amber:#fbbf24; --pink:#f472b6;
+    --rip:#22d3ee; --eigrp:#a78bfa; --ospf:#34d399;
+    --radius:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,Ubuntu,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+  code,.mono{font-family:"Cascadia Code",Consolas,"SFMono-Regular",Menlo,monospace}
+
+  /* fondo */
+  .bg-grid{position:fixed;inset:0;z-index:-2;background-image:linear-gradient(rgba(34,211,238,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(34,211,238,.05) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse at 50% 0%,#000 30%,transparent 75%)}
+  .glow{position:fixed;z-index:-1;border-radius:50%;filter:blur(110px);opacity:.35;pointer-events:none}
+  .g1{width:520px;height:520px;background:var(--violet);top:-160px;left:-120px}
+  .g2{width:460px;height:460px;background:var(--cyan);top:120px;right:-160px}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(7,11,22,.72);border-bottom:1px solid var(--line)}
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .brand{display:flex;align-items:center;gap:12px;font-weight:700;letter-spacing:.3px}
+  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--cyan),var(--violet));display:grid;place-items:center;box-shadow:0 0 24px rgba(139,92,246,.45)}
+  .brand small{display:block;font-weight:500;color:var(--muted);font-size:.72rem;letter-spacing:1.5px;text-transform:uppercase}
+  .links{display:flex;gap:28px;font-size:.92rem;color:var(--muted)}
+  .links a{position:relative;transition:color .2s}
+  .links a:hover{color:var(--text)}
+  .links a::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:linear-gradient(90deg,var(--cyan),var(--violet));transition:width .25s}
+  .links a:hover::after{width:100%}
+  .clock{font-size:.85rem;color:var(--cyan);padding:7px 14px;border:1px solid var(--line);border-radius:999px;background:var(--bg2)}
+
+  /* hero */
+  .hero{padding:90px 24px 70px;display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center}
+  .pill{display:inline-flex;align-items:center;gap:10px;padding:7px 15px;border-radius:999px;border:1px solid rgba(52,211,153,.35);background:rgba(52,211,153,.08);color:var(--green);font-size:.82rem;font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 rgba(52,211,153,.7);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(52,211,153,.7)}70%{box-shadow:0 0 0 10px rgba(52,211,153,0)}100%{box-shadow:0 0 0 0 rgba(52,211,153,0)}}
+  h1{font-size:clamp(2.3rem,4.6vw,3.7rem);line-height:1.08;margin:22px 0 18px;letter-spacing:-1px}
+  .grad{background:linear-gradient(90deg,var(--cyan),var(--violet) 55%,var(--pink));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:var(--muted);font-size:1.08rem;max-width:560px}
+  .cta{display:flex;gap:14px;margin-top:32px;flex-wrap:wrap}
+  .btn{padding:13px 24px;border-radius:12px;font-weight:600;font-size:.95rem;transition:transform .2s,box-shadow .2s}
+  .btn-primary{background:linear-gradient(135deg,var(--cyan),var(--violet));color:#060a14;box-shadow:0 10px 30px rgba(34,211,238,.25)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(139,92,246,.4)}
+  .btn-ghost{border:1px solid var(--line);background:var(--bg2)}
+  .btn-ghost:hover{border-color:var(--cyan)}
+
+  /* topologia animada */
+  .topo{background:linear-gradient(180deg,var(--card),var(--bg2));border:1px solid var(--line);border-radius:24px;padding:18px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+  .topo-head{display:flex;justify-content:space-between;align-items:center;padding:4px 6px 12px;color:var(--muted);font-size:.8rem}
+  .win{display:flex;gap:6px}.win i{width:11px;height:11px;border-radius:50%;display:block}
+  .topo svg{width:100%;height:auto;display:block}
+  .link{stroke:#2a3a63;stroke-width:2.2}
+  .flow{stroke-width:2.6;stroke-dasharray:6 14;animation:flow 1.6s linear infinite;fill:none}
+  @keyframes flow{to{stroke-dashoffset:-40}}
+  .node circle{stroke-width:2.5}
+  .node text{font-size:11px;fill:var(--text);font-weight:600;text-anchor:middle}
+  .zone{font-size:10px;letter-spacing:2px;font-weight:700}
+
+  /* stats */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:90px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;position:relative;overflow:hidden}
+  .stat::before{content:"";position:absolute;inset:0 auto auto 0;width:100%;height:3px;background:linear-gradient(90deg,var(--cyan),var(--violet))}
+  .stat b{font-size:2.1rem;display:block;line-height:1.1}
+  .stat span{color:var(--muted);font-size:.88rem}
+
+  /* secciones */
+  section.wrap{padding:30px 24px 90px}
+  .eyebrow{color:var(--cyan);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;font-size:.78rem}
+  h2{font-size:clamp(1.8rem,3.2vw,2.5rem);margin:10px 0 14px;letter-spacing:-.5px}
+  .sub{color:var(--muted);max-width:680px;margin-bottom:40px}
+
+  .domains{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .domain{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:28px;transition:transform .25s,border-color .25s,box-shadow .25s}
+  .domain:hover{transform:translateY(-6px)}
+  .domain.rip:hover{border-color:var(--rip);box-shadow:0 18px 50px rgba(34,211,238,.15)}
+  .domain.eigrp:hover{border-color:var(--eigrp);box-shadow:0 18px 50px rgba(167,139,250,.15)}
+  .domain.ospf:hover{border-color:var(--ospf);box-shadow:0 18px 50px rgba(52,211,153,.15)}
+  .tag{display:inline-block;font-size:.72rem;font-weight:700;letter-spacing:1.5px;padding:5px 11px;border-radius:8px;margin-bottom:16px}
+  .rip .tag{background:rgba(34,211,238,.12);color:var(--rip)}
+  .eigrp .tag{background:rgba(167,139,250,.12);color:var(--eigrp)}
+  .ospf .tag{background:rgba(52,211,153,.12);color:var(--ospf)}
+  .domain h3{font-size:1.35rem;margin-bottom:8px}
+  .domain p{color:var(--muted);font-size:.95rem;margin-bottom:18px}
+  .domain ul{list-style:none;display:grid;gap:9px}
+  .domain li{display:flex;gap:10px;font-size:.92rem}
+  .domain li::before{content:"›";font-weight:700}
+  .rip li::before{color:var(--rip)}.eigrp li::before{color:var(--eigrp)}.ospf li::before{color:var(--ospf)}
+
+  .services{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  .svc{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:20px;padding:26px;position:relative;overflow:hidden}
+  .svc .ico{width:48px;height:48px;border-radius:14px;display:grid;place-items:center;margin-bottom:16px;font-size:1.4rem}
+  .svc h4{font-size:1.1rem;margin-bottom:4px}
+  .svc .ip{font-size:.82rem;color:var(--cyan);margin-bottom:10px}
+  .svc p{color:var(--muted);font-size:.9rem}
+  .svc .st{position:absolute;top:22px;right:22px;font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(52,211,153,.12);color:var(--green)}
+
+  /* tabla */
+  .table-card{background:var(--card);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+  table{width:100%;border-collapse:collapse;font-size:.92rem}
+  th{text-align:left;padding:16px 20px;background:var(--card2);color:var(--muted);font-weight:600;font-size:.78rem;letter-spacing:1.2px;text-transform:uppercase}
+  td{padding:14px 20px;border-top:1px solid var(--line)}
+  tr:hover td{background:rgba(34,211,238,.04)}
+  .vl{display:inline-block;min-width:44px;text-align:center;padding:3px 9px;border-radius:7px;font-weight:700;font-size:.8rem}
+
+  /* seguridad y timeline */
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:22px;padding:30px}
+  .panel h3{margin-bottom:18px;font-size:1.2rem}
+  .check{display:grid;gap:14px}
+  .check div{display:flex;gap:14px;align-items:flex-start}
+  .check b{flex:none;width:26px;height:26px;border-radius:8px;display:grid;place-items:center;background:rgba(34,211,238,.12);color:var(--cyan);font-size:.8rem}
+  .check p{color:var(--muted);font-size:.92rem}
+  .check strong{color:var(--text);display:block}
+  .terminal{background:#050810;border:1px solid var(--line);border-radius:14px;padding:18px;font-size:.84rem;color:#b9c6ea;overflow-x:auto;white-space:pre}
+  .terminal .p{color:var(--green)}.terminal .c{color:var(--amber)}.terminal .k{color:var(--cyan)}
+
+  .timeline{position:relative;margin-left:8px;padding-left:28px;border-left:2px solid var(--line);display:grid;gap:26px}
+  .tl{position:relative}
+  .tl::before{content:"";position:absolute;left:-36px;top:5px;width:14px;height:14px;border-radius:50%;background:var(--bg);border:3px solid var(--violet)}
+  .tl.done::before{border-color:var(--green);background:var(--green)}
+  .tl h5{font-size:1rem}.tl p{color:var(--muted);font-size:.9rem}
+
+  footer{border-top:1px solid var(--line);padding:40px 0;color:var(--muted);font-size:.88rem}
+  footer .wrap{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+  footer strong{color:var(--text)}
+
+  .reveal{opacity:0;transform:translateY(24px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.on{opacity:1;transform:none}
+
+  @media (max-width:960px){
+    .hero{grid-template-columns:1fr;padding-top:60px}
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .domains,.services,.two{grid-template-columns:1fr}
+    .links{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="bg-grid"></div><div class="glow g1"></div><div class="glow g2"></div>
+
+<nav>
+  <div class="wrap">
+    <a href="#" class="brand">
+      <div class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#060a14" stroke-width="2.4" stroke-linecap="round"><circle cx="5" cy="12" r="2.5"/><circle cx="19" cy="5" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M7.3 11 16.7 6M7.3 13l9.4 5"/></svg></div>
+      <div>Red Pamplona<small>Proyecto Final · Redes II</small></div>
+    </a>
+    <div class="links">
+      <a href="#arquitectura">Arquitectura</a>
+      <a href="#servicios">Servicios</a>
+      <a href="#direccionamiento">Direccionamiento</a>
+      <a href="#seguridad">Seguridad</a>
+      <a href="#roadmap">Implementación</a>
+    </div>
+    <div class="clock mono" id="clock">--:--:--</div>
+  </div>
+</nav>
+
+<header class="wrap hero">
+  <div class="reveal">
+    <span class="pill"><span class="dot"></span>Servidor web en línea · VLAN 30</span>
+    <h1>Infraestructura de red <span class="grad">integrada y monitoreada</span></h1>
+    <p class="lead">Tres dominios de enrutamiento —RIP, EIGRP y OSPF multimarca— interconectados por redistribución, con salida a Internet por NAT, enlaces redundantes con EtherChannel, servicios internos y monitoreo centralizado con alertas automatizadas.</p>
+    <div class="cta">
+      <a class="btn btn-primary" href="#arquitectura">Explorar la arquitectura</a>
+      <a class="btn btn-ghost" href="#servicios">Ver servicios</a>
+    </div>
+  </div>
+
+  <div class="topo reveal">
+    <div class="topo-head"><div class="win"><i style="background:#f87171"></i><i style="background:#fbbf24"></i><i style="background:#34d399"></i></div><span class="mono">topologia.live</span></div>
+    <svg viewBox="0 0 520 340" role="img" aria-label="Diagrama de los tres dominios de enrutamiento">
+      <defs>
+        <linearGradient id="gr" x1="0" x2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+      </defs>
+      <!-- zonas -->
+      <rect x="10" y="14" width="160" height="312" rx="18" fill="rgba(34,211,238,.05)" stroke="rgba(34,211,238,.25)" stroke-dasharray="5 5"/>
+      <rect x="180" y="14" width="160" height="312" rx="18" fill="rgba(167,139,250,.05)" stroke="rgba(167,139,250,.25)" stroke-dasharray="5 5"/>
+      <rect x="350" y="14" width="160" height="312" rx="18" fill="rgba(52,211,153,.05)" stroke="rgba(52,211,153,.25)" stroke-dasharray="5 5"/>
+      <text x="90" y="38" class="zone" fill="#22d3ee" text-anchor="middle">RIP v2</text>
+      <text x="260" y="38" class="zone" fill="#a78bfa" text-anchor="middle">EIGRP</text>
+      <text x="430" y="38" class="zone" fill="#34d399" text-anchor="middle">OSPF</text>
+      <!-- enlaces -->
+      <g class="link">
+        <line x1="60" y1="110" x2="125" y2="170"/><line x1="125" y1="170" x2="60" y2="250"/><line x1="125" y1="170" x2="125" y2="290"/>
+        <line x1="125" y1="170" x2="225" y2="110"/><line x1="225" y1="110" x2="300" y2="170"/><line x1="300" y1="170" x2="225" y2="250"/><line x1="225" y1="110" x2="225" y2="250"/>
+        <line x1="300" y1="170" x2="395" y2="110"/><line x1="395" y1="110" x2="465" y2="190"/><line x1="465" y1="190" x2="395" y2="260"/><line x1="395" y1="110" x2="395" y2="260"/>
+      </g>
+      <g class="flow" stroke="url(#gr)">
+        <path d="M60 250 L125 170 L225 110 L300 170 L395 110 L465 190"/>
+      </g>
+      <g class="flow" stroke="#34d399" style="animation-duration:2.2s">
+        <path d="M395 260 L465 190"/>
+      </g>
+      <!-- nodos -->
+      <g class="node"><circle cx="60" cy="110" r="17" fill="#0b2230" stroke="#22d3ee"/><text x="60" y="114">R1</text></g>
+      <g class="node"><circle cx="125" cy="170" r="19" fill="#0b2230" stroke="#22d3ee"/><text x="125" y="174">R2</text></g>
+      <g class="node"><circle cx="60" cy="250" r="15" fill="#0b2230" stroke="#22d3ee"/><text x="60" y="254">S3</text></g>
+      <g class="node"><circle cx="125" cy="290" r="15" fill="#0b2230" stroke="#22d3ee"/><text x="125" y="294">SW</text></g>
+      <g class="node"><circle cx="225" cy="110" r="17" fill="#1b1535" stroke="#a78bfa"/><text x="225" y="114">R3</text></g>
+      <g class="node"><circle cx="300" cy="170" r="17" fill="#1b1535" stroke="#a78bfa"/><text x="300" y="174">R5</text></g>
+      <g class="node"><circle cx="225" cy="250" r="17" fill="#1b1535" stroke="#a78bfa"/><text x="225" y="254">R7</text></g>
+      <g class="node"><circle cx="395" cy="110" r="17" fill="#0b2a22" stroke="#34d399"/><text x="395" y="114">R9</text></g>
+      <g class="node"><circle cx="465" cy="190" r="17" fill="#0b2a22" stroke="#34d399"/><text x="465" y="194">R10</text></g>
+      <g class="node"><circle cx="395" cy="260" r="17" fill="#0b2a22" stroke="#34d399"/><text x="395" y="264">R11</text></g>
+    </svg>
+  </div>
+</header>
+
+<div class="wrap stats reveal">
+  <div class="stat"><b class="count" data-to="3">0</b><span>Dominios de enrutamiento</span></div>
+  <div class="stat"><b class="count" data-to="11">0</b><span>Routers en la topología</span></div>
+  <div class="stat"><b class="count" data-to="5">0</b><span>VLANs en el dominio RIP</span></div>
+  <div class="stat"><b class="count" data-to="3">0</b><span>Servidores internos</span></div>
+</div>
+
+<section id="arquitectura" class="wrap">
+  <div class="reveal">
+    <span class="eyebrow">Arquitectura</span>
+    <h2>Tres dominios, una sola red</h2>
+    <p class="sub">Cada dominio funciona de forma independiente y luego se integra mediante redistribución controlada de rutas, para lograr comunicación total entre todas las redes internas.</p>
+  </div>
+  <div class="domains">
+    <article class="domain rip reveal">
+      <span class="tag">DOMINIO 1 · RIP V2</span>
+      <h3>Sede Pamplona</h3>
+      <p>Red de usuarios y servicios con segmentación por VLAN, enrutamiento inter-VLAN y salida a Internet.</p>
+      <ul>
+        <li>RIP v2 sin auto-summary y passive-interface</li>
+        <li>Router-on-a-stick con 4 subinterfaces 802.1Q</li>
+        <li>Switch multicapa con SVI y puerto enrutado</li>
+        <li>NAT/PAT hacia Internet en el router de borde</li>
+      </ul>
+    </article>
+    <article class="domain eigrp reveal">
+      <span class="tag">DOMINIO 2 · EIGRP</span>
+      <h3>Red regional</h3>
+      <p>Red corporativa de varias sedes interconectadas por enlaces punto a punto en un sistema autónomo propio.</p>
+      <ul>
+        <li>Vecindades EIGRP validadas</li>
+        <li>Tabla de topología y sucesores factibles</li>
+        <li>Varias LAN de sede</li>
+        <li>Redistribución hacia RIP y OSPF</li>
+      </ul>
+    </article>
+    <article class="domain ospf reveal">
+      <span class="tag">DOMINIO 3 · OSPF</span>
+      <h3>Núcleo multimarca</h3>
+      <p>Interoperabilidad entre plataformas de distintos fabricantes usando un estándar abierto.</p>
+      <ul>
+        <li>Área 0 (backbone)</li>
+        <li>Vecindades OSPF y LSDB validadas</li>
+        <li>Equipos de diferentes plataformas</li>
+        <li>Interconexión con RIP y EIGRP</li>
+      </ul>
+    </article>
+  </div>
+</section>
+
+<section id="servicios" class="wrap">
+  <div class="reveal">
+    <span class="eyebrow">Servicios internos</span>
+    <h2>Lo que hace funcionar la red</h2>
+    <p class="sub">Servidores Linux en contenedores dentro de la topología, con configuración versionada y arranque automático.</p>
+  </div>
+  <div class="services">
+    <div class="svc reveal"><span class="st">ACTIVO</span><div class="ico" style="background:rgba(34,211,238,.12)">⚡</div><h4>DHCP</h4><div class="ip mono">192.168.10.2 · isc-dhcp-server</div><p>Asigna IP, gateway, DNS y dominio a las cinco redes de usuarios. Atiende otras VLAN mediante DHCP relay en R2 y S3.</p></div>
+    <div class="svc reveal"><span class="st">ACTIVO</span><div class="ico" style="background:rgba(167,139,250,.12)">🧭</div><h4>DNS</h4><div class="ip mono">192.168.20.3 · BIND 9</div><p>Zona interna con los nombres de servidores y equipos de red, y reenvío seguro de consultas externas solo para redes internas.</p></div>
+    <div class="svc reveal"><span class="st">ACTIVO</span><div class="ico" style="background:rgba(52,211,153,.12)">🌐</div><h4>Web</h4><div class="ip mono">192.168.30.2 · Nginx</div><p>Este portal. Publicado hacia la red externa mediante NAT estático en el router de borde.</p></div>
+    <div class="svc reveal"><div class="ico" style="background:rgba(251,191,36,.12)">🔁</div><h4>NAT / PAT</h4><div class="ip mono">R2 · e0/3</div><p>Todas las redes internas comparten la dirección pública del router de borde para salir a Internet.</p></div>
+    <div class="svc reveal"><div class="ico" style="background:rgba(244,114,182,.12)">📊</div><h4>Zabbix + Grafana</h4><div class="ip mono">ICMP · SNMP</div><p>Monitoreo centralizado de routers y servidores, dashboards de métricas y alertas por caída de equipos.</p></div>
+    <div class="svc reveal"><div class="ico" style="background:rgba(34,211,238,.12)">🤖</div><h4>Bot de Telegram</h4><div class="ip mono">n8n · /estado_red</div><p>Consultas automatizadas del estado de la red desde el celular: alertas, dispositivos caídos y resumen.</p></div>
+  </div>
+</section>
+
+<section id="direccionamiento" class="wrap">
+  <div class="reveal">
+    <span class="eyebrow">Direccionamiento</span>
+    <h2>Plan IP del dominio RIP</h2>
+    <p class="sub">IPs fijas para equipos y servidores; rangos .100–.200 reservados para clientes DHCP en cada red.</p>
+  </div>
+  <div class="table-card reveal">
+    <table>
+      <thead><tr><th>VLAN</th><th>Red</th><th>Gateway</th><th>Uso</th><th>DHCP</th></tr></thead>
+      <tbody>
+        <tr><td><span class="vl" style="background:rgba(34,211,238,.12);color:#22d3ee">10</span></td><td class="mono">192.168.10.0/24</td><td class="mono">192.168.10.1</td><td>Usuarios</td><td class="mono">.100 – .200</td></tr>
+        <tr><td><span class="vl" style="background:rgba(167,139,250,.12);color:#a78bfa">20</span></td><td class="mono">192.168.20.0/24</td><td class="mono">192.168.20.1</td><td>DNS</td><td class="mono">.100 – .200</td></tr>
+        <tr><td><span class="vl" style="background:rgba(52,211,153,.12);color:#34d399">30</span></td><td class="mono">192.168.30.0/24</td><td class="mono">192.168.30.1</td><td>Web</td><td class="mono">.100 – .200</td></tr>
+        <tr><td><span class="vl" style="background:rgba(251,191,36,.12);color:#fbbf24">40</span></td><td class="mono">192.168.40.0/24</td><td class="mono">192.168.40.1</td><td>Administración</td><td class="mono">.100 – .200</td></tr>
+        <tr><td><span class="vl" style="background:rgba(244,114,182,.12);color:#f472b6">15</span></td><td class="mono">192.168.15.0/24</td><td class="mono">192.168.15.1</td><td>LAN S3</td><td class="mono">.100 – .200</td></tr>
+        <tr><td><span class="vl" style="background:rgba(147,163,199,.12);color:#93a3c7">—</span></td><td class="mono">20.20.20.0/30</td><td class="mono">—</td><td>Enlace R1 – R2</td><td>—</td></tr>
+        <tr><td><span class="vl" style="background:rgba(147,163,199,.12);color:#93a3c7">—</span></td><td class="mono">192.168.25.0/30</td><td class="mono">—</td><td>Enlace R1 – S3</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section id="seguridad" class="wrap">
+  <div class="reveal">
+    <span class="eyebrow">Seguridad</span>
+    <h2>Diseñada para protegerse</h2>
+    <p class="sub">Cada servicio expone solo lo necesario y cada decisión está documentada y justificada.</p>
+  </div>
+  <div class="two">
+    <div class="panel reveal">
+      <h3>Buenas prácticas aplicadas</h3>
+      <div class="check">
+        <div><b>01</b><p><strong>Passive-interface en RIP</strong>Las LAN de usuarios no reciben actualizaciones de enrutamiento.</p></div>
+        <div><b>02</b><p><strong>DNS sin resolver abierto</strong>Solo las redes internas pueden consultar y usar recursión.</p></div>
+        <div><b>03</b><p><strong>Servicios sin privilegios</strong>BIND corre con el usuario <code>bind</code>, no como root.</p></div>
+        <div><b>04</b><p><strong>Sin autoinstalación por TFTP</strong><code>no service config</code> evita configuraciones de servidores falsos.</p></div>
+        <div><b>05</b><p><strong>Listas de acceso</strong>Control de tráfico hacia servidores y del acceso administrativo.</p></div>
+      </div>
+    </div>
+    <div class="panel reveal">
+      <h3>Verificación en vivo</h3>
+      <div class="terminal mono"><span class="p">PC32&gt;</span> ip dhcp
+DORA IP 192.168.10.100/24 GW 192.168.10.1
+
+<span class="p">PC32&gt;</span> ping dns1.pamplona.local
+<span class="k">dns1.pamplona.local resolved to 192.168.20.3</span>
+84 bytes from 192.168.20.3 icmp_seq=1 ttl=63
+
+<span class="p">PC32&gt;</span> ping google.com
+<span class="k">google.com resolved to 172.217.30.174</span>
+84 bytes from 172.217.30.174 icmp_seq=1 ttl=127
+
+<span class="p">R1-PAMPLONA#</span> show ip route rip
+<span class="c">R  192.168.10.0/24 [120/1] via 20.20.20.2</span>
+<span class="c">R  192.168.15.0/24 [120/1] via 192.168.25.1</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="roadmap" class="wrap">
+  <div class="reveal">
+    <span class="eyebrow">Implementación</span>
+    <h2>Fases del proyecto</h2>
+    <p class="sub">Primero cada dominio por separado; después la integración, el monitoreo y la automatización.</p>
+  </div>
+  <div class="panel reveal">
+    <div class="timeline">
+      <div class="tl done"><h5>Fase 1 · Diseño</h5><p>Topología, direccionamiento, VLANs y plan de servicios.</p></div>
+      <div class="tl done"><h5>Fase 2 · Dominio RIP</h5><p>VLANs, troncales, inter-VLAN, RIP v2, NAT, DHCP, DNS y servidor web.</p></div>
+      <div class="tl"><h5>Fase 3 · EIGRP y OSPF</h5><p>Dominios independientes con vecindades verificadas.</p></div>
+      <div class="tl"><h5>Fase 4 · Integración</h5><p>Redistribución entre protocolos, ruta por defecto controlada, EtherChannel y ACLs.</p></div>
+      <div class="tl"><h5>Fase 5 · Monitoreo y automatización</h5><p>Zabbix, Grafana, n8n y bot de Telegram.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div><strong>Proyecto Final · Redes II</strong><br>Fundación Universitaria Konrad Lorenz · Ingeniería de Software</div>
+    <div>Docente: <strong>Javier Moreno Corredor</strong><br>Autor: <strong>Camilo Prieto</strong> · <span class="mono">github.com/KamiroDark</span></div>
+    <div class="mono">Servido por Nginx<br>192.168.30.2 · VLAN 30</div>
+  </div>
+</footer>
+
+<script>
+  // reloj
+  const clock=document.getElementById('clock');
+  const tick=()=>{clock.textContent=new Date().toLocaleTimeString('es-CO',{hour12:false})};
+  tick();setInterval(tick,1000);
+
+  // aparicion al hacer scroll + contadores
+  const io=new IntersectionObserver(es=>{es.forEach(e=>{
+    if(!e.isIntersecting)return;
+    e.target.classList.add('on');
+    e.target.querySelectorAll('.count').forEach(c=>{
+      const to=+c.dataset.to;let n=0;const step=()=>{n++;c.textContent=n;if(n<to)setTimeout(step,90)};step();
+    });
+    io.unobserve(e.target);
+  })},{threshold:.15});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+</script>
+</body>
+</html>

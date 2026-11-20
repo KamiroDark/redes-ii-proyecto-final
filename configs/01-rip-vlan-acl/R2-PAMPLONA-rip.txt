@@ -1,0 +1,34 @@
+! =====================================================
+! R2-PAMPLONA - Bloque 1 (enlace a R1 + RIP)
+! Comandos aplicados el 2026-11-19
+! (VLANs/subinterfaces se aplicaron el 2026-10-31)
+! =====================================================
+enable
+configure terminal
+interface ethernet0/0
+ description Enlace a R1-PAMPLONA (RIP)
+ ip address 20.20.20.2 255.255.255.252
+ no shutdown
+exit
+! Desactiva la autoinstalacion por TFTP que se activaba al recibir
+! IP por DHCP en e0/3 (mensajes %Error opening tftp://255.255.255.255/...).
+! Ademas evita aceptar configuraciones de un TFTP falso en la red.
+no service config
+router rip
+ version 2
+ no auto-summary
+ network 20.0.0.0
+ network 192.168.10.0
+ network 192.168.20.0
+ network 192.168.30.0
+ network 192.168.40.0
+ ! No enviar actualizaciones RIP hacia las LAN de usuarios (seguridad)
+ passive-interface ethernet0/1.10
+ passive-interface ethernet0/1.20
+ passive-interface ethernet0/2.30
+ passive-interface ethernet0/2.40
+end
+write memory
+
+! La red de VMware (e0/3) NO se anuncia en RIP: la salida a Internet
+! se hara con NAT + ruta por defecto (default-information originate).
