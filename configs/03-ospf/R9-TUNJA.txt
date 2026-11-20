@@ -1,0 +1,25 @@
+! R9-TUNJA - OSPF proceso 1 - ABR (area 0 / area 1) - 2026-11-20
+enable
+configure terminal
+hostname R9-TUNJA
+no ip domain-lookup
+interface ethernet0/0
+ description Enlace a R3-PAIPA (OSPF area 1)
+ ip address 192.168.24.1 255.255.255.252
+ no shutdown
+interface ethernet0/1
+ description Enlace a R10-DUITAMA (OSPF area 0)
+ ip address 10.0.0.1 255.255.255.252
+ no shutdown
+interface ethernet0/2
+ description LAN Tunja (S4)
+ ip address 192.168.5.1 255.255.255.0
+ no shutdown
+router ospf 1
+ router-id 9.9.9.9
+ network 10.0.0.0 0.0.0.3 area 0
+ network 192.168.24.0 0.0.0.3 area 1
+ network 192.168.5.0 0.0.0.255 area 1
+ passive-interface ethernet0/2
+end
+write memory

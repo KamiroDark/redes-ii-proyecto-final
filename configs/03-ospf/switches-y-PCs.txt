@@ -1,0 +1,11 @@
+! S4, S5, S6: solo hostname (capa 2, VLAN 1)
+enable
+configure terminal
+hostname S4
+end
+write memory
+
+! PCs
+! PC-9 : set pcname PC-9  / ip 192.168.5.11/24 192.168.5.1  / save
+! PC-10: set pcname PC-10 / ip 192.168.6.12/24 192.168.6.1  / save
+! PC-11: set pcname PC-11 / ip 192.168.7.13/24 192.168.7.1  / save

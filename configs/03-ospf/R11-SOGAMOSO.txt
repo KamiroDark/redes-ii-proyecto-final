@@ -1,0 +1,20 @@
+! R11-SOGAMOSO - OSPF proceso 1 - ABR (area 0 / area 2) - 2026-11-20
+enable
+configure terminal
+hostname R11-SOGAMOSO
+no ip domain-lookup
+interface ethernet0/0
+ description Enlace a R10-DUITAMA (OSPF area 0)
+ ip address 10.0.0.6 255.255.255.252
+ no shutdown
+interface ethernet0/1
+ description LAN Sogamoso (S6)
+ ip address 192.168.7.1 255.255.255.0
+ no shutdown
+router ospf 1
+ router-id 11.11.11.11
+ network 10.0.0.4 0.0.0.3 area 0
+ network 192.168.7.0 0.0.0.255 area 2
+ passive-interface ethernet0/1
+end
+write memory
