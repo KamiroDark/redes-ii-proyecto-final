@@ -1,0 +1,17 @@
+! R3-PAIPA - ASBR EIGRP <-> OSPF (area 1) - 2026-11-20
+configure terminal
+interface ethernet0/2
+ description Enlace a R9-TUNJA (OSPF area 1)
+ ip address 192.168.24.2 255.255.255.252
+ no shutdown
+router ospf 1
+ router-id 3.3.3.3
+ network 192.168.24.0 0.0.0.3 area 1
+ ! subnets: sin esto solo se redistribuyen redes con mascara de clase
+ redistribute eigrp 100 subnets
+ ! OSPF no redistribuye la ruta por defecto sola: se anuncia explicitamente
+ default-information originate
+router eigrp 100
+ redistribute ospf 1 metric 10000 100 255 1 1500
+end
+write memory

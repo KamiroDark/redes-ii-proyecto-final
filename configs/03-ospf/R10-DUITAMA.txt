@@ -1,0 +1,25 @@
+! R10-DUITAMA - OSPF proceso 1 - area 0 (backbone) - 2026-11-20
+enable
+configure terminal
+hostname R10-DUITAMA
+no ip domain-lookup
+interface ethernet0/0
+ description Enlace a R9-TUNJA
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+interface ethernet0/2
+ description Enlace a R11-SOGAMOSO
+ ip address 10.0.0.5 255.255.255.252
+ no shutdown
+interface ethernet0/1
+ description LAN Duitama (S5)
+ ip address 192.168.6.1 255.255.255.0
+ no shutdown
+router ospf 1
+ router-id 10.10.10.10
+ network 10.0.0.0 0.0.0.3 area 0
+ network 10.0.0.4 0.0.0.3 area 0
+ network 192.168.6.0 0.0.0.255 area 0
+ passive-interface ethernet0/1
+end
+write memory
