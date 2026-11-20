@@ -31,3 +31,6 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# Paquetes .deb descargados para instalar sin Internet en los contenedores
+*.deb

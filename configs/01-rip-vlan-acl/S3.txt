@@ -1,0 +1,49 @@
+! =====================================================
+! S3 - Switch multicapa (capa 3) - Bloque 1
+! Comandos aplicados el 2026-11-19
+! =====================================================
+! S3 conecta la LAN de PC20 (192.168.15.0/24) con R1 (192.168.25.0/30).
+! Como son redes distintas, S3 debe enrutar: e0/0 es puerto enrutado y
+! la LAN usa VLAN 15 + SVI (escala si se agregan mas equipos a S3).
+! "ip routing" ya viene activo por defecto en esta imagen IOL
+! (verificado con "show ip route": muestra tabla de enrutamiento).
+enable
+configure terminal
+vlan 15
+ name VLAN15_LAN_S3
+exit
+interface ethernet0/0
+ description Enlace a R1-PAMPLONA (RIP)
+ no switchport
+ ip address 192.168.25.1 255.255.255.252
+ no shutdown
+exit
+interface ethernet0/1
+ description PC20
+ switchport mode access
+ switchport access vlan 15
+exit
+interface vlan 15
+ description Gateway LAN PC20
+ ip address 192.168.15.1 255.255.255.0
+ no shutdown
+exit
+router rip
+ version 2
+ no auto-summary
+ network 192.168.25.0
+ network 192.168.15.0
+ passive-interface vlan 15
+end
+write memory
+
+! --- Verificacion ---
+! show ip route rip -> 20.20.20.0/30 [120/1] y 192.168.10/20/30/40.0 [120/2] via 192.168.25.2
+! PC20> ping 192.168.10.12 -> OK, TTL 61 (PC20 -> S3 -> R1 -> R2 -> PC14)
+
+! --- DHCP relay (2026-11-19) ---
+configure terminal
+interface vlan 15
+ ip helper-address 192.168.10.2
+end
+write memory

@@ -1,12 +1,19 @@
-PC14: ip 192.168.10.12/24 192.168.10.1
-PC15: ip 192.168.10.11/24 192.168.10.1
-PC4:  ip 192.168.10.10/24 192.168.10.1
-PC2:  ip 192.168.20.11/24 192.168.20.1
-PC5:  ip 192.168.20.10/24 192.168.20.1
-PC10: ip 192.168.30.12/24 192.168.30.1
-PC13: ip 192.168.30.32/24 192.168.30.1
-PC11: ip 192.168.30.11/24 192.168.30.1
-PC3:  ip 192.168.40.3/24 192.168.40.1
-PC12: ip 192.168.40.11/24 192.168.40.1
-PC32: sin IP (la imagen no define VLAN ni IP)
-PC20: pendiente (depende de cómo configuremos S3)
+! VPCS - Bloque 1. Pegar en cada PC y terminar con "save".
+! Estado 2026-11-19: todos configurados y guardados (PC14 se reconfiguro: habia perdido la IP).
+
+PC14:  set pcname PC14 / ip 192.168.10.12/24 192.168.10.1
+PC15:  set pcname PC15 / ip 192.168.10.11/24 192.168.10.1
+PC4:   set pcname PC4  / ip 192.168.10.10/24 192.168.10.1
+PC2:   set pcname PC2  / ip 192.168.20.11/24 192.168.20.1
+PC5:   set pcname PC5  / ip 192.168.20.10/24 192.168.20.1
+PC10:  set pcname PC10 / ip 192.168.30.12/24 192.168.30.1
+PC13:  set pcname PC13 / ip 192.168.30.32/24 192.168.30.1
+PC11:  set pcname PC11 / ip 192.168.30.11/24 192.168.30.1
+PC3:   set pcname PC3  / ip 192.168.40.3/24 192.168.40.1
+PC12:  set pcname PC12 / ip 192.168.40.11/24 192.168.40.1
+PC32:  recibira IP por DHCP (ip dhcp) - ver docs/direccionamiento.md
+PC20:  set pcname PC20 / ip 192.168.15.10/24 192.168.15.1
+
+! Prueba realizada: PC14 -> 192.168.10.1, 20.20.20.2 (TTL 255) y 20.20.20.1 (TTL 254) OK
+! Inter-VLAN: PC4 -> PC3 y PC11 -> PC2 OK (TTL 63). Misma VLAN entre switches: PC4 -> PC14 OK.
+! Bloque completo: PC20 -> PC14 OK (TTL 61).

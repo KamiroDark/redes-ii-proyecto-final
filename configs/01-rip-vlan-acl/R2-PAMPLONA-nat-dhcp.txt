@@ -1,0 +1,42 @@
+! =====================================================
+! R2-PAMPLONA - NAT (PAT) y DHCP relay - 2026-11-19
+! =====================================================
+enable
+configure terminal
+! Redes internas que se traducen al salir a Internet
+ip access-list standard NAT_INSIDE
+ remark Redes internas que salen a Internet por NAT
+ permit 192.168.10.0 0.0.0.255
+ permit 192.168.20.0 0.0.0.255
+ permit 192.168.30.0 0.0.0.255
+ permit 192.168.40.0 0.0.0.255
+ permit 192.168.15.0 0.0.0.255
+exit
+interface ethernet0/1.10
+ ip nat inside
+interface ethernet0/1.20
+ ip nat inside
+ ip helper-address 192.168.10.2
+interface ethernet0/2.30
+ ip nat inside
+ ip helper-address 192.168.10.2
+interface ethernet0/2.40
+ ip nat inside
+ ip helper-address 192.168.10.2
+interface ethernet0/0
+ ip nat inside
+interface ethernet0/3
+ ip nat outside
+exit
+! PAT: todas las redes internas comparten la IP de e0/3 (DHCP de VMware)
+ip nat inside source list NAT_INSIDE interface ethernet0/3 overload
+end
+write memory
+
+! Nota: la ruta por defecto 0.0.0.0/0 via 192.168.224.2 la instala el DHCP de VMware (AD 254).
+! Nota: con poca RAM el IOL da %SYS-2-MALLOCFAIL / %NBAR-2-NOMEMORY al activar NAT -> subir RAM.
+! Pendiente: anunciar la ruta por defecto a R1 y S3 (default-information originate).
+
+! --- Verificacion ---
+! show ip nat translations   -> tcp 192.168.224.131:xxxx  192.168.10.2:xxxx ...
+! show ip nat statistics     -> Inside: e0/0, .10, .20, .30, .40 / Outside: e0/3

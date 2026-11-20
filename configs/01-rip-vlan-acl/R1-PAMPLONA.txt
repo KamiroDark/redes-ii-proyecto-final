@@ -1,0 +1,35 @@
+! =====================================================
+! R1-PAMPLONA - Bloque 1 (RIP)
+! Comandos aplicados el 2026-11-19
+! =====================================================
+enable
+configure terminal
+interface ethernet0/0
+ description Enlace a R2-PAMPLONA (RIP)
+ ip address 20.20.20.1 255.255.255.252
+ no shutdown
+exit
+router rip
+ version 2
+ no auto-summary
+ network 20.0.0.0
+end
+write memory
+
+! --- Enlace a S3 (agregado despues) ---
+configure terminal
+interface ethernet0/1
+ description Enlace a S3 (RIP)
+ ip address 192.168.25.2 255.255.255.252
+ no shutdown
+exit
+router rip
+ network 192.168.25.0
+end
+write memory
+
+! --- Verificacion ---
+! show ip interface brief | include Ethernet0/0
+! ping 20.20.20.2
+! show ip route rip     -> 4 VLANs via 20.20.20.2 + 192.168.15.0/24 via 192.168.25.1
+! show ip protocols     -> RIP v2, sin auto-summary, fuente 20.20.20.2

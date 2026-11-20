@@ -1,0 +1,12 @@
+! =====================================================
+! S1 - Cambios posteriores a la configuracion de VLANs
+! =====================================================
+! PC32 como cliente DHCP en la VLAN 10 (usuarios)
+configure terminal
+interface ethernet2/1
+ description PC32 (cliente DHCP)
+ switchport mode access
+ switchport access vlan 10
+end
+write memory
+! Para la prueba de relay se movio temporalmente a la VLAN 30 y recibio 192.168.30.100.
