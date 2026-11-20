@@ -1,0 +1,21 @@
+! R6-CUCUTA - EIGRP AS 100 - 2026-11-20
+! e0/0 hacia R1-PAMPLONA: pendiente (enlace entre dominios / redistribucion)
+enable
+configure terminal
+hostname R6-CUCUTA
+no ip domain-lookup
+interface ethernet0/1
+ description Enlace a R5-BARRANCABERMEJA
+ ip address 192.168.22.2 255.255.255.252
+ no shutdown
+interface ethernet0/2
+ description Enlace a R7-BOGOTA
+ ip address 192.168.19.2 255.255.255.252
+ no shutdown
+router eigrp 100
+ eigrp router-id 6.6.6.6
+ no auto-summary
+ network 192.168.22.0 0.0.0.3
+ network 192.168.19.0 0.0.0.3
+end
+write memory

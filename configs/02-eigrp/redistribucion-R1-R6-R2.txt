@@ -1,0 +1,51 @@
+! =====================================================
+! Enlace RIP <-> EIGRP y redistribucion - 2026-11-20
+! R1-PAMPLONA es el unico punto de redistribucion (ASBR): sin riesgo de bucles.
+! La ruta por defecto (RIP desde R2) pasa a EIGRP como D*EX.
+! =====================================================
+! --- R6-CUCUTA ---
+configure terminal
+interface ethernet0/0
+ description Enlace a R1-PAMPLONA (RIP-EIGRP)
+ ip address 192.168.24.1 255.255.255.252
+ no shutdown
+router eigrp 100
+ network 192.168.24.0 0.0.0.3
+end
+write memory
+
+! --- R1-PAMPLONA ---
+configure terminal
+interface ethernet0/2
+ description Enlace a R6-CUCUTA (EIGRP)
+ ip address 192.168.24.2 255.255.255.252
+ no shutdown
+router eigrp 100
+ eigrp router-id 1.1.1.1
+ no auto-summary
+ network 192.168.24.0 0.0.0.3
+ ! seed metric: BW 10000 Kbps, delay 100 (x10 us), reliability 255, load 1, MTU 1500
+ redistribute rip metric 10000 100 255 1 1500
+router rip
+ ! 3 saltos para que RIP prefiera sus rutas internas
+ redistribute eigrp 100 metric 3
+end
+write memory
+
+! --- R2-PAMPLONA: redes EIGRP al NAT ---
+configure terminal
+ip access-list standard NAT_INSIDE
+ permit 192.168.16.0 0.0.7.255
+ permit 192.168.24.0 0.0.0.3
+ permit 192.168.50.0 0.0.0.255
+end
+write memory
+
+! --- Verificacion (2026-11-20) ---
+! R6: D*EX 0.0.0.0/0 y D EX 192.168.10/15/20/25/30/40 y 20.20.20.0 via 192.168.24.2
+! R2: R 192.168.50.0/24 [120/3] via 20.20.20.1
+! PC-Medellin -> PC14 (192.168.10.12): OK, TTL 59
+!   trace: 192.168.50.1 > 192.168.18.1 > 192.168.19.2 > 192.168.24.2 > 20.20.20.2 > 192.168.10.12
+! PC-Medellin -> 8.8.8.8: OK (NAT en R2)
+! R5 show ip eigrp topology all-links: 192.168.50.0/24 con 2 sucesores (ECMP);
+!   192.168.17.0 via R6 (358400/332800) no es sucesor factible (RD 332800 no < FD 332800)

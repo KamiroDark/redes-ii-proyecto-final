@@ -1,0 +1,20 @@
+! R4-BUCARAMANGA - EIGRP AS 100 - 2026-11-20
+enable
+configure terminal
+hostname R4-BUCARAMANGA
+no ip domain-lookup
+interface ethernet0/1
+ description Enlace a R3-PAIPA
+ ip address 192.168.16.2 255.255.255.252
+ no shutdown
+interface ethernet0/0
+ description Enlace a R5-BARRANCABERMEJA
+ ip address 192.168.21.1 255.255.255.252
+ no shutdown
+router eigrp 100
+ eigrp router-id 4.4.4.4
+ no auto-summary
+ network 192.168.16.0 0.0.0.3
+ network 192.168.21.0 0.0.0.3
+end
+write memory

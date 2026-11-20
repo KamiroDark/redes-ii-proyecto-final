@@ -1,0 +1,48 @@
+! =====================================================
+! Politicas de acceso de la imagen del docente - 2026-11-20
+! =====================================================
+! --- R2: VLAN 40 -> DNS segun IP par/impar ---
+! Impares (192.168.40.1 0.0.0.254): DNS permitido -> web por IP y por nombre
+! Pares   (192.168.40.0 0.0.0.254): DNS bloqueado -> web solo por IP
+configure terminal
+ip access-list extended VLAN40_DNS_PAR_IMPAR
+ remark IP impar de VLAN 40: DNS permitido (web por IP y por nombre)
+ permit udp 192.168.40.1 0.0.0.254 host 192.168.20.3 eq domain
+ permit tcp 192.168.40.1 0.0.0.254 host 192.168.20.3 eq domain
+ remark IP par de VLAN 40: DNS bloqueado (web solo por IP)
+ deny udp 192.168.40.0 0.0.0.254 host 192.168.20.3 eq domain log
+ deny tcp 192.168.40.0 0.0.0.254 host 192.168.20.3 eq domain log
+ permit ip any any
+exit
+interface ethernet0/2.40
+ ip access-group VLAN40_DNS_PAR_IMPAR in
+end
+write memory
+
+! Prueba: PC3 (.3, impar) resuelve www.pamplona.com; PC12 con .12 (par) no resuelve,
+! pero conecta al web por IP (ping 192.168.30.2 -P 6 -p 80). PC12 vuelve a .11.
+
+! --- S1 (.253) y S2 (.254): Telnet solo desde VLAN 40 ---
+configure terminal
+interface vlan 40
+ description Gestion
+ ip address 192.168.40.254 255.255.255.0
+ no shutdown
+exit
+ip default-gateway 192.168.40.1
+username admin privilege 15 secret <CONTRASENA>
+ip access-list standard ACCESO_ADMIN
+ remark Solo la VLAN 40 (Admin) puede administrar el switch
+ permit 192.168.40.0 0.0.0.255
+ deny any log
+exit
+line vty 0 4
+ access-class ACCESO_ADMIN in
+ login local
+ transport input telnet
+end
+write memory
+
+! Prueba desde R2:
+!  telnet 192.168.40.254 /source-interface ethernet0/2.40 -> pide usuario (permitido)
+!  telnet 192.168.40.254 /source-interface ethernet0/1.10 -> rechazado

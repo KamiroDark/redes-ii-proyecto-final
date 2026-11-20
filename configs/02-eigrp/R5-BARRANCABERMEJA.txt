@@ -1,0 +1,20 @@
+! R5-BARRANCABERMEJA - EIGRP AS 100 - 2026-11-20
+enable
+configure terminal
+hostname R5-BARRANCABERMEJA
+no ip domain-lookup
+interface ethernet0/1
+ description Enlace a R4-BUCARAMANGA
+ ip address 192.168.21.2 255.255.255.252
+ no shutdown
+interface ethernet0/0
+ description Enlace a R6-CUCUTA
+ ip address 192.168.22.1 255.255.255.252
+ no shutdown
+router eigrp 100
+ eigrp router-id 5.5.5.5
+ no auto-summary
+ network 192.168.21.0 0.0.0.3
+ network 192.168.22.0 0.0.0.3
+end
+write memory
