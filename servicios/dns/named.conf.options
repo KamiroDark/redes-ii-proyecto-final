@@ -1,0 +1,27 @@
+// Redes internas del proyecto que pueden usar este DNS
+acl "redes_internas" {
+    127.0.0.1;
+    192.168.10.0/24;    // VLAN 10
+    192.168.20.0/24;    // VLAN 20
+    192.168.30.0/24;    // VLAN 30
+    192.168.40.0/24;    // VLAN 40
+    192.168.15.0/24;    // LAN S3 / PC20
+    192.168.25.0/30;    // Enlace R1-S3
+    20.20.20.0/30;      // Enlace R1-R2
+};
+
+options {
+    directory "/var/cache/bind";
+    listen-on { 127.0.0.1; 192.168.20.3; };
+    listen-on-v6 { none; };
+
+    allow-query { redes_internas; };
+    recursion yes;
+    allow-recursion { redes_internas; };
+
+    // Lo que no sea pamplona.local se pregunta a DNS publicos
+    forwarders { 8.8.8.8; 1.1.1.1; };
+
+    forward only;
+    dnssec-validation no;
+};

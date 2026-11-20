@@ -21,7 +21,30 @@ Todos entregan DNS `192.168.20.3` y dominio `pamplona.local`.
 
 ## Arranque
 
-El contenedor no tiene systemd, así que el servicio se inicia a mano:
+El contenedor no tiene systemd (su proceso 1 es `bash`). Lo instalado y `/etc/dhcp/dhcpd.conf` **sí sobreviven** a Stop/Start del nodo, pero `dhcpd` no arranca solo.
+
+### Arranque automático (agregado a `/root/.bashrc`)
+
+Como el proceso 1 es un `bash` interactivo, lee `~/.bashrc` al encender. El bloque espera a que `eth1` tenga IP (PnetLab la asigna un instante después), asegura la ruta por defecto y arranca `dhcpd` solo si no está corriendo:
+
+```
+# === Arranque automatico del servidor DHCP (Proyecto Redes II) ===
+if ! pgrep -x dhcpd >/dev/null; then
+  (
+    for i in $(seq 1 30); do
+      ip -4 addr show eth1 | grep -q 192.168.10.2 && break
+      sleep 1
+    done
+    ip route replace default via 192.168.10.1 dev eth1 2>/dev/null
+    touch /var/lib/dhcp/dhcpd.leases
+    dhcpd -4 -q -cf /etc/dhcp/dhcpd.conf -lf /var/lib/dhcp/dhcpd.leases eth1
+  ) &
+fi
+```
+
+Verificado: tras Stop/Start del nodo, `dhcpd` corre y la ruta `default via 192.168.10.1` está presente.
+
+### Arranque manual
 
 ```
 dhcpd -t -cf /etc/dhcp/dhcpd.conf            # validar sintaxis
