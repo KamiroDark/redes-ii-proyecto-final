@@ -1,0 +1,50 @@
+! =====================================================
+! EtherChannel LACP S1 <-> S2 (Po1) - 2026-11-20
+! Segundo cable agregado: S1 e3/0 <-> S2 e1/3 (el original es S1 e0/2 <-> S2 e0/0)
+! Justificacion: el troncal S1-S2 lleva las 4 VLAN y era un punto unico de falla.
+! LACP (IEEE 802.3ad, mode active) en vez de PAgP (propietario Cisco).
+! =====================================================
+! --- S1 ---
+configure terminal
+interface ethernet3/0
+ description EtherChannel a S2 (miembro 2)
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40
+interface range ethernet0/2 , ethernet3/0
+ channel-group 1 mode active
+interface port-channel 1
+ description EtherChannel a S2 (LACP)
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40
+end
+write memory
+
+! --- S2 ---
+configure terminal
+interface ethernet1/3
+ description EtherChannel a S1 (miembro 2)
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40
+interface range ethernet0/0 , ethernet1/3
+ channel-group 1 mode active
+interface port-channel 1
+ description EtherChannel a S1 (LACP)
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40
+end
+write memory
+
+! --- Verificacion (2026-11-20) ---
+! S1/S2 show etherchannel summary: Po1(SU) LACP, miembros (P)
+! show interfaces port-channel 1: BW 20000 Kbit/sec (2 x 10 Mbps)
+! Redundancia: ping continuo PC4 -> PC14 mientras se hace shutdown de S1 e0/2: el ping sigue.
+!
+! Incidente: el bloque de S2 se aplico por error tambien en S1 y metio en Po1 a
+! S1 e0/0 (troncal a R2) y e1/3 (PC3) -> se cayo el gateway de VLAN 10.
+! Correccion en S1:
+!  interface ethernet0/0 -> no channel-group 1, trunk dot1q, allowed vlan 10,20
+!  interface ethernet1/3 -> no channel-group 1, switchport mode access, vlan 40
