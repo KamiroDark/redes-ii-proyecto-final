@@ -5,7 +5,7 @@ hostname S7
 end
 write memory
 
-! PC-Medellin (VPCS)
-set pcname PC-Medellin
+! PC-Medellin (VPCS). El nombre del VPCS admite maximo 6 caracteres
+set pcname PCMED
 ip 192.168.50.10/24 192.168.50.1
 save
