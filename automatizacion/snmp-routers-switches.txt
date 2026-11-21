@@ -1,0 +1,13 @@
+! SNMP v2c solo lectura, restringido al servidor Zabbix (192.168.40.21)
+! Aplicado en R1-R11, S1, S2 y S3
+configure terminal
+ip access-list standard SNMP_ZABBIX
+ remark Solo el servidor Zabbix puede consultar SNMP
+ permit host 192.168.40.21
+ deny any log
+exit
+snmp-server community redes2mon RO SNMP_ZABBIX
+snmp-server contact admin@pamplona.local
+snmp-server location Proyecto Redes II
+end
+write memory

@@ -1,0 +1,93 @@
+{
+  "name": "Bot Telegram - Red Pamplona (Zabbix)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Bot de Telegram · Red Pamplona\n**Flujo de automatización (n8n + Zabbix + Telegram)**\n\n1. **Cada 10 segundos** se ejecuta el flujo.\n2. **Configuración**: token del bot, API de Zabbix y URLs.\n3. **Bot**: lee los mensajes nuevos (`getUpdates`), consulta la API de Zabbix (`host.get`, `item.get`, `trigger.get`) y responde.\n   También compara los problemas con la ejecución anterior y envía **alertas automáticas** (caída / recuperación).\n\nComandos: /estado_red /alertas /dispositivos_caidos /zabbix /grafana /resumen",
+        "height": 300,
+        "width": 460
+      },
+      "name": "Descripción",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -360
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "seconds",
+              "secondsInterval": 10
+            }
+          ]
+        }
+      },
+      "name": "Cada 10 segundos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Configuracion del bot (edita solo esto)\nreturn [{ json: {\n  telegram_token: 'PEGA_AQUI_EL_TOKEN_DE_BOTFATHER',\n  // Pasarela HTTP en la VM de PnetLab (lado externo de R2) que reenvia a api.telegram.org\n  telegram_api: 'http://192.168.224.128:8081',\n  zabbix_api: 'http://192.168.40.21/api_jsonrpc.php',\n  zabbix_user: 'Admin',\n  zabbix_password: 'zabbix',\n  zabbix_url: 'http://192.168.224.131:8080',\n  grafana_url: 'http://192.168.224.131:3000/d/red-pamplona',\n  // IDs de chat autorizados (vacio = cualquiera). Ej: [123456789]\n  allowed_chats: []\n} }];\n"
+      },
+      "name": "Configuracion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// ===== Bot de Telegram + Zabbix (Proyecto Redes II) =====\n// Lee los mensajes del bot (polling), consulta la API de Zabbix y responde.\n// Ademas vigila los problemas de Zabbix y avisa de alertas nuevas/resueltas.\nconst cfg = $('Configuracion').first().json;\nconst TG = (cfg.telegram_api || 'https://api.telegram.org') + '/bot' + cfg.telegram_token;\nconst st = $getWorkflowStaticData('global');\nst.offset = st.offset || 0;\nst.chats = st.chats || [];\nst.known = st.known || {};\n\nconst http = (o) => this.helpers.httpRequest(Object.assign({ json: true, timeout: 15000 }, o));\nconst esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst hora = (ts) => new Date((ts ? Number(ts) * 1000 : Date.now())).toLocaleString('es-CO', { timeZone: 'America/Bogota' });\nconst SEV = ['Sin clasificar', 'Información', 'Advertencia', 'Media', 'Alta', 'Desastre'];\n\nasync function zcall(method, params, auth) {\n  const body = { jsonrpc: '2.0', method, params, id: 1 };\n  if (auth) body.auth = auth;\n  const r = await http({ method: 'POST', url: cfg.zabbix_api, body, headers: { 'Content-Type': 'application/json-rpc' } });\n  if (r.error) throw new Error(r.error.data || r.error.message);\n  return r.result;\n}\nasync function zbx(method, params) {\n  if (!st.auth) st.auth = await zcall('user.login', { user: cfg.zabbix_user, password: cfg.zabbix_password });\n  try { return await zcall(method, params, st.auth); }\n  catch (e) { st.auth = await zcall('user.login', { user: cfg.zabbix_user, password: cfg.zabbix_password }); return zcall(method, params, st.auth); }\n}\nasync function send(chat_id, text) {\n  await http({ method: 'POST', url: TG + '/sendMessage', body: { chat_id, text, parse_mode: 'HTML', disable_web_page_preview: true } });\n}\n\n// ---------- Consultas a Zabbix ----------\nasync function equipos() {\n  const hosts = await zbx('host.get', { output: ['hostid', 'host'], selectGroups: ['name'], monitored_hosts: true, sortfield: 'host' });\n  const items = await zbx('item.get', { output: ['hostid', 'lastvalue', 'lastclock'], filter: { key_: 'icmpping' }, monitored: true });\n  const ping = {};\n  items.forEach(i => { ping[i.hostid] = i.lastclock === '0' ? null : i.lastvalue === '1'; });\n  return hosts.map(h => ({ host: h.host, grupo: (h.groups[0] || {}).name || 'Otros', arriba: ping[h.hostid] }));\n}\nasync function problemas(minSev) {\n  return zbx('trigger.get', {\n    output: ['triggerid', 'description', 'priority', 'lastchange'], filter: { value: 1 }, monitored: true,\n    skipDependent: true, expandDescription: true, min_severity: minSev, selectHosts: ['host'],\n    sortfield: ['priority', 'lastchange'], sortorder: 'DESC'\n  });\n}\nconst icono = (a) => a === null ? '⚪' : (a ? '🟢' : '🔴');\n\nasync function cmdEstado() {\n  const eq = await equipos();\n  const grupos = {};\n  eq.forEach(e => { (grupos[e.grupo] = grupos[e.grupo] || []).push(e); });\n  let t = '<b>📡 Estado de la red</b>\\n';\n  Object.keys(grupos).sort().forEach(g => {\n    t += `\\n<b>${esc(g)}</b>\\n` + grupos[g].map(e => `${icono(e.arriba)} ${esc(e.host)}`).join('\\n') + '\\n';\n  });\n  return t + `\\n<i>${hora()}</i>`;\n}\nasync function cmdCaidos() {\n  const caidos = (await equipos()).filter(e => e.arriba === false);\n  if (!caidos.length) return '✅ <b>No hay dispositivos caídos.</b> Todos responden a ICMP.\\n<i>' + hora() + '</i>';\n  return `🔴 <b>Dispositivos caídos (${caidos.length})</b>\\n\\n` + caidos.map(e => `• ${esc(e.host)} <i>(${esc(e.grupo)})</i>`).join('\\n') + '\\n\\n<i>' + hora() + '</i>';\n}\nasync function cmdAlertas() {\n  const p = await problemas(2);\n  if (!p.length) return '✅ <b>Sin alertas activas</b> en Zabbix.\\n<i>' + hora() + '</i>';\n  return `🚨 <b>Alertas activas (${p.length})</b>\\n\\n` + p.slice(0, 20).map(x =>\n    `• <b>${esc(x.hosts[0] ? x.hosts[0].host : '?')}</b>: ${esc(x.description)}\\n   ${SEV[x.priority]} · desde ${hora(x.lastchange)}`).join('\\n');\n}\nasync function cmdZabbix() {\n  const v = await zcall('apiinfo.version', {});\n  const eq = await equipos();\n  const items = await zbx('item.get', { countOutput: true, monitored: true });\n  return `<b>📊 Zabbix</b>\\nVersión: ${esc(v)}\\nServidor: 192.168.40.21 (VLAN 40)\\nEquipos monitoreados: ${eq.length}\\nMétricas activas: ${items}\\nMonitoreo: ICMP + SNMP v2c\\n\\n🔗 ${cfg.zabbix_url}`;\n}\nasync function cmdGrafana() {\n  return `<b>📈 Grafana</b>\\nServidor: 192.168.40.23 (VLAN 40)\\nFuente de datos: Zabbix (plugin alexanderzobnin)\\nDashboard: <i>Red Pamplona · Estado general</i>\\n\\n🔗 ${cfg.grafana_url}`;\n}\nasync function cmdResumen() {\n  const eq = await equipos();\n  const p = await problemas(3);\n  const arriba = eq.filter(e => e.arriba).length, caidos = eq.filter(e => e.arriba === false).length;\n  const dom = (g) => { const x = eq.filter(e => e.grupo === g); return x.length ? `${x.every(e => e.arriba) ? '🟢' : '🔴'} ${g}: ${x.filter(e => e.arriba).length}/${x.length}` : ''; };\n  return `<b>📋 Resumen de la red</b>\\n\\n` +\n    `Equipos: <b>${eq.length}</b> · 🟢 ${arriba} · 🔴 ${caidos}\\n` +\n    `Alertas activas (media o mayor): <b>${p.length}</b>\\n\\n` +\n    ['Routers RIP', 'Routers EIGRP', 'Routers OSPF', 'Switches', 'Servidores'].map(dom).filter(Boolean).join('\\n') +\n    `\\n\\n<i>${hora()}</i>`;\n}\nconst AYUDA = '<b>🤖 Bot de la Red Pamplona</b>\\nComandos disponibles:\\n\\n' +\n  '/estado_red — estado de todos los equipos\\n/alertas — problemas activos en Zabbix\\n' +\n  '/dispositivos_caidos — equipos que no responden\\n/zabbix — información del servidor Zabbix\\n' +\n  '/grafana — enlace al dashboard\\n/resumen — resumen general\\n\\n' +\n  'Este chat queda suscrito a las <b>alertas automáticas</b> (caídas y recuperaciones).';\nconst CMDS = { '/start': async () => AYUDA, '/ayuda': async () => AYUDA, '/help': async () => AYUDA,\n  '/estado_red': cmdEstado, '/alertas': cmdAlertas, '/dispositivos_caidos': cmdCaidos,\n  '/zabbix': cmdZabbix, '/grafana': cmdGrafana, '/resumen': cmdResumen };\n\n// ---------- 1) Atender comandos ----------\nconst out = [];\nconst upd = await http({ method: 'GET', url: `${TG}/getUpdates?offset=${st.offset}&timeout=0` });\nfor (const u of (upd.result || [])) {\n  st.offset = u.update_id + 1;\n  const m = u.message;\n  if (!m || !m.text) continue;\n  const chat = m.chat.id;\n  if (cfg.allowed_chats.length && !cfg.allowed_chats.includes(chat)) { await send(chat, '⛔ Chat no autorizado.'); continue; }\n  if (!st.chats.includes(chat)) st.chats.push(chat);\n  const cmd = m.text.trim().split(/[\\s@]/)[0].toLowerCase();\n  const fn = CMDS[cmd];\n  let resp;\n  try { resp = fn ? await fn() : 'No conozco ese comando. Escribe /ayuda'; }\n  catch (e) { resp = '⚠️ Error consultando Zabbix: ' + esc(e.message); }\n  await send(chat, resp);\n  out.push({ json: { chat, cmd, respondido: true } });\n}\n\n// ---------- 2) Alertas automaticas ----------\ntry {\n  const p = await problemas(3);\n  const now = {};\n  p.forEach(x => { now[x.triggerid + ':' + x.lastchange] = x; });\n  if (st.init) {\n    for (const k of Object.keys(now)) if (!st.known[k]) {\n      const x = now[k];\n      for (const c of st.chats) await send(c, `🚨 <b>ALERTA</b> · ${SEV[x.priority]}\\n<b>${esc(x.hosts[0] ? x.hosts[0].host : '?')}</b>: ${esc(x.description)}\\n<i>${hora(x.lastchange)}</i>`);\n      out.push({ json: { alerta: x.description } });\n    }\n    for (const k of Object.keys(st.known)) if (!now[k]) {\n      const x = st.known[k];\n      for (const c of st.chats) await send(c, `✅ <b>RESUELTO</b>\\n<b>${esc(x.host)}</b>: ${esc(x.description)}\\n<i>${hora()}</i>`);\n      out.push({ json: { resuelto: x.description } });\n    }\n  }\n  st.known = {};\n  Object.keys(now).forEach(k => { st.known[k] = { host: now[k].hosts[0] ? now[k].hosts[0].host : '?', description: now[k].description }; });\n  st.init = true;\n} catch (e) { out.push({ json: { error_alertas: e.message } }); }\n\nreturn out.length ? out : [{ json: { ok: true, sin_novedades: true } }];\n"
+      },
+      "name": "Bot Telegram + Zabbix",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Cada 10 segundos": {
+      "main": [
+        [
+          {
+            "node": "Configuracion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuracion": {
+      "main": [
+        [
+          {
+            "node": "Bot Telegram + Zabbix",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveManualExecutions": false,
+    "saveDataErrorExecution": "all"
+  },
+  "pinData": {}
+}
